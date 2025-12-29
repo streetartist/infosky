@@ -30,14 +30,34 @@
         }
     }
 
-    // Direct API call helper
+    // Delegate API call to background script (to avoid Mixed Content issues)
     async function callAPI(endpoint, data) {
-        const response = await fetch(`${API_URL}${endpoint}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+        let action = '';
+
+        // Map endpoints to background actions
+        if (endpoint.includes('create-node')) action = 'createNode';
+        else if (endpoint.includes('quick-save')) action = 'quickSave';
+        else if (endpoint.includes('find-related')) action = 'findRelated';
+        else if (endpoint.includes('status')) action = 'checkStatus';
+        else {
+            // Fallback or error
+            console.error('[InfoSky] Unknown endpoint for background proxy:', endpoint);
+            return { success: false, error: 'Unknown endpoint' };
+        }
+
+        return new Promise((resolve) => {
+            chrome.runtime.sendMessage({
+                action: action,
+                data: data
+            }, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.error('[InfoSky] Message error:', chrome.runtime.lastError);
+                    resolve({ success: false, error: chrome.runtime.lastError.message });
+                } else {
+                    resolve(response);
+                }
+            });
         });
-        return await response.json();
     }
 
     // ============ Floating Button for Text Selection ============

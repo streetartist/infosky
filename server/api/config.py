@@ -67,7 +67,17 @@ async def update_config(config: ConfigUpdate, session: Session = Depends(get_ses
             record.updated_at = datetime.utcnow()
         session.add(record)
 
-    upsert("openai_api_key", config.api_key)
+    # Only update API Key if it's not the masked version (contains '...' and is short)
+    # or if we can verify it's changed. 
+    # Valid keys are usually long.
+    should_update_key = True
+    if "..." in config.api_key and len(config.api_key) < 20:
+        print("DEBUG: Received masked key, ignoring update for api_key")
+        should_update_key = False
+    
+    if should_update_key:
+        upsert("openai_api_key", config.api_key)
+        
     upsert("openai_base_url", config.base_url)
     upsert("openai_model", config.model)
     upsert("retrieval_mode", config.retrieval_mode)
@@ -76,7 +86,7 @@ async def update_config(config: ConfigUpdate, session: Session = Depends(get_ses
     
     # Update in-memory settings immediately
     settings.update_config(
-        key=config.api_key,
+        key=config.api_key if should_update_key else settings.openai_api_key,
         base_url=config.base_url,
         model=config.model,
         retrieval_mode=config.retrieval_mode
