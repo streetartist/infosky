@@ -363,8 +363,32 @@
     background: transparent;
 }
 
-#infosky-floating-panel ::-webkit-scrollbar-thumb,
 #infosky-side-panel ::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.2);
     border-radius: 2px;
+}
+
+/* ============ Manual Selection Mode ============ */
+
+.infosky-element-hover {
+    outline: 2px dashed #3b82f6 !important;
+    background-color: rgba(59, 130, 246, 0.1) !important;
+    cursor: crosshair !important;
+}
+
+.infosky-mode-indicator {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2147483647;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-family: system-ui, sans-serif;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.2);
 }

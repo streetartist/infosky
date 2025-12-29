@@ -17,31 +17,44 @@ def get_html2text_converter():
     h.protect_links = True
     return h
 
-def process_html_content(html_content: str, url: str = "") -> str:
+def process_html_content(html_content: str, url: str = "", extract_main_content: bool = True) -> str:
     """
-    Processes raw HTML content and converts it to clean Markdown using Readability.
+    Processes raw HTML content and converts it to clean Markdown.
+    If extract_main_content is True, uses Readability to find the main article.
+    If False, converts the provided HTML directly (for manual selection).
     """
     try:
-        # Use Readability algorithm for universal content extraction
-        print("DEBUG: Using Readability algorithm for content extraction...")
-        try:
-            readability_doc = ReadabilityDocument(html_content)
-            readability_html = readability_doc.summary()
-            title = readability_doc.title() or "No Title"
-            
-            # Parse the Readability output
-            main_content = BeautifulSoup(readability_html, "html.parser")
-            print(f"DEBUG: Readability extracted content successfully")
-        except Exception as e:
-            print(f"DEBUG: Readability extraction failed: {e}, falling back to body")
-            soup = BeautifulSoup(html_content, "html.parser")
-            title = soup.title.string.strip() if soup.title else "No Title"
-            
-            # Remove noise tags
-            for tag in soup(["script", "style", "nav", "footer", "header", "aside", 
-                            "iframe", "noscript", "form", "button", "input", "svg"]):
-                tag.decompose()
-            main_content = soup.body
+        title = "No Title"
+        main_content = None
+
+        if extract_main_content:
+            # Use Readability algorithm for universal content extraction
+            print("DEBUG: Using Readability algorithm for content extraction...")
+            try:
+                readability_doc = ReadabilityDocument(html_content)
+                readability_html = readability_doc.summary()
+                title = readability_doc.title() or "No Title"
+                
+                # Parse the Readability output
+                main_content = BeautifulSoup(readability_html, "html.parser")
+                print(f"DEBUG: Readability extracted content successfully")
+            except Exception as e:
+                print(f"DEBUG: Readability extraction failed: {e}, falling back to body")
+                soup = BeautifulSoup(html_content, "html.parser")
+                title = soup.title.string.strip() if soup.title else "No Title"
+                
+                # Remove noise tags
+                for tag in soup(["script", "style", "nav", "footer", "header", "aside", 
+                                "iframe", "noscript", "form", "button", "input", "svg"]):
+                    tag.decompose()
+                main_content = soup.body
+        else:
+            # Manual selection - simply parse the provided fragment
+            print("DEBUG: Skipping Readability (Manual Selection)...")
+            main_content = BeautifulSoup(html_content, "html.parser")
+            # Try to find a title if full document, otherwise ignore
+            if main_content.title:
+                title = main_content.title.string.strip()
         
         if not main_content:
             return f"Title: {title}\n\nError: Could not extract content"

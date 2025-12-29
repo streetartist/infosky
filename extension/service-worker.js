@@ -116,6 +116,13 @@ chrome.runtime.onInstalled.addListener(() => {
             title: '保存此页面到 InfoSky',
             contexts: ['page']
         });
+
+        // Create context menu for manual selection
+        chrome.contextMenus.create({
+            id: 'infosky-manual-select',
+            title: '手动选择正文区域 (InfoSky)',
+            contexts: ['page', 'selection']
+        });
     });
 });
 
@@ -166,10 +173,20 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
             const result = await quickSave(apiUrl, {
                 url: tab.url,
                 title: tab.title,
-                html_content: htmlContent
+                html_content: htmlContent,
+                is_manual_selection: false
             });
 
             showNotification(result.success ? '页面已保存' : '保存失败', result.message || result.error);
+            break;
+
+        case 'infosky-manual-select':
+            // Toggle selection mode in content script
+            chrome.tabs.sendMessage(tab.id, { action: 'toggleSelectionMode' })
+                .catch(err => {
+                    console.error('Could not toggle selection mode:', err);
+                    showNotification('错误', '无法启动选择模式，请刷新页面后重试');
+                });
             break;
     }
 });

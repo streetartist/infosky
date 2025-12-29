@@ -4,6 +4,8 @@ import openai
 from openai import AsyncOpenAI
 from typing import AsyncGenerator
 
+import traceback
+
 class AIProcessor:
     def __init__(self):
         self._init_client()
@@ -12,7 +14,9 @@ class AIProcessor:
         print(f"DEBUG: _init_client called. Using Key: {settings.openai_api_key[:3] if settings.openai_api_key else 'Placeholder'}...")
         self.client = AsyncOpenAI(
             api_key=settings.openai_api_key or "sk-placeholder",
-            base_url=settings.openai_base_url
+            base_url=settings.openai_base_url,
+            timeout=float(settings.OPENAI_TIMEOUT),
+            max_retries=settings.OPENAI_MAX_RETRIES
         )
 
     def _check_and_reinit_client(self):
@@ -20,7 +24,9 @@ class AIProcessor:
         current_base = str(self.client.base_url).rstrip('/')
         setting_base = settings.openai_base_url.rstrip('/')
         
-        if (self.client.api_key != settings.openai_api_key) or (current_base != setting_base):
+        if (self.client.api_key != settings.openai_api_key) or \
+           (current_base != setting_base) or \
+           (self.client.max_retries != settings.OPENAI_MAX_RETRIES):
             print(f"DEBUG: AIProcessor detected config change. Re-initializing client.")
             self._init_client()
 
@@ -119,14 +125,42 @@ class AIProcessor:
                 stream=True
             )
             
-            # Collect all chunks
             content = ""
             async for chunk in stream:
                 if chunk.choices[0].delta.content:
                     content += chunk.choices[0].delta.content
             
-            data = json.loads(content)
-            return data.get("nodes", []), data.get("edges", [])
+            # Clean content if it contains markdown code blocks
+            clean_content = content
+            if "```" in clean_content:
+                import re
+                clean_content = re.sub(r'^```json\s*', '', clean_content, flags=re.MULTILINE)
+                clean_content = re.sub(r'^```\s*', '', clean_content, flags=re.MULTILINE)
+                clean_content = re.sub(r'```$', '', clean_content, flags=re.MULTILINE)
+                clean_content = clean_content.strip()
+
+            try:
+                data = json.loads(clean_content)
+            except json.JSONDecodeError as e:
+                print(f"JSON Parse Error: {e}")
+                print(f"Raw Content that failed to parse: {content}")
+                # Attempt to repair or partial parse could go here, but for now just fail gracefully with info
+                return [
+                    {"label": "格式错误", "type": "Error", "content": f"AI返回格式异常，无法解析。原始返回: {content[:100]}..."}
+                ], []
+
+            nodes = data.get("nodes", [])
+            edges = data.get("edges", [])
+            
+            # Validate structure
+            if not isinstance(nodes, list):
+                print(f"Invalid nodes format: {type(nodes)}")
+                nodes = []
+            if not isinstance(edges, list):
+                 print(f"Invalid edges format: {type(edges)}")
+                 edges = []
+
+            return nodes, edges
             
         except openai.AuthenticationError as ae:
             print(f"AI Auth Error: {ae}")
@@ -135,6 +169,7 @@ class AIProcessor:
             ], []
         except Exception as e:
             print(f"AI Processing Error: {e}")
+            traceback.print_exc() # Print full stack trace
             # Fallback for demo if no API key or error
             return [
                 {"label": "处理失败", "type": "Error", "content": f"AI处理遇到问题: {str(e)}"}

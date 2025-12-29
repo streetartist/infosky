@@ -8,6 +8,31 @@ from .database.database import create_db_and_tables
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_db_and_tables()
+    
+    # Load settings from DB on startup
+    from sqlmodel import Session, select
+    from .database.database import engine
+    from .database.models import SystemConfig
+    from .core.settings import settings
+    
+    try:
+        with Session(engine) as session:
+            configs = session.exec(select(SystemConfig)).all()
+            db_config = {c.key: c.value for c in configs}
+            
+            if "openai_api_key" in db_config:
+                settings.openai_api_key = db_config["openai_api_key"]
+            if "openai_base_url" in db_config:
+                settings.openai_base_url = db_config["openai_base_url"]
+            if "openai_model" in db_config:
+                settings.openai_model = db_config["openai_model"]
+            if "retrieval_mode" in db_config:
+                settings.retrieval_mode = db_config["retrieval_mode"]
+            
+            print(f"Loaded {len(db_config)} settings from database.")
+    except Exception as e:
+        print(f"Warning: Could not load settings from DB on startup: {e}")
+        
     yield
 
 app = FastAPI(title="InfoSky API", version="0.1.0", lifespan=lifespan)

@@ -14,6 +14,7 @@ router = APIRouter()
 class IngestRequest(BaseModel):
     text: str
     html_content: Optional[str] = None
+    is_manual_selection: bool = False
 
 @router.post("/")
 async def ingest_info(request: IngestRequest, session: Session = Depends(get_session)):
@@ -31,8 +32,12 @@ async def ingest_info(request: IngestRequest, session: Session = Depends(get_ses
         
         if request.html_content:
             # Use provided HTML content
-            print("Using provided HTML content")
-            raw_fetched = process_html_content(request.html_content, text)
+            print(f"Using provided HTML content (Manual Selection: {request.is_manual_selection})")
+            raw_fetched = process_html_content(
+                request.html_content, 
+                text, 
+                extract_main_content=not request.is_manual_selection
+            )
         else:
             # Fetch content from URL
             raw_fetched = await fetch_url_content(text)

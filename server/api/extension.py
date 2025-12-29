@@ -19,6 +19,7 @@ class QuickSaveRequest(BaseModel):
     url: str
     title: Optional[str] = None
     html_content: Optional[str] = None
+    is_manual_selection: bool = False
 
 class CreateNodeRequest(BaseModel):
     """Request to create a node from selected text"""
@@ -60,7 +61,8 @@ async def quick_save(request: QuickSaveRequest, session: Session = Depends(get_s
     # Call existing ingest endpoint
     ingest_request = IngestRequest(
         text=request.url,
-        html_content=request.html_content
+        html_content=request.html_content,
+        is_manual_selection=request.is_manual_selection
     )
     result = await ingest_info(ingest_request, session)
     

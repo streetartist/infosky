@@ -14,6 +14,9 @@
     let sidePanel = null;
     let selectedText = '';
     let selectionRange = null;
+    let isSelectionMode = false;
+    let hoveredElement = null;
+    let modeIndicator = null;
 
     // Load API URL from storage
     async function loadSettings() {
@@ -359,7 +362,7 @@
     `).join('');
 
         // Show the panel
-        sidePanel.classList.remove('collapsed');
+        // sidePanel.classList.remove('collapsed'); // Default to collapsed
     }
 
     // ============ Toast Notifications ============
@@ -426,9 +429,147 @@
         if (request.action === 'showToast') {
             showToast(request.title, request.message);
             sendResponse({ success: true });
+        } else if (request.action === 'toggleSelectionMode') {
+            toggleSelectionMode();
+            sendResponse({ success: true });
         }
         return true;
     });
+
+    // ============ Manual Selection Mode ============
+
+    function toggleSelectionMode() {
+        if (isSelectionMode) {
+            disableSelectionMode();
+        } else {
+            enableSelectionMode();
+        }
+    }
+
+    function enableSelectionMode() {
+        isSelectionMode = true;
+
+        // Create indicator
+        if (!modeIndicator) {
+            modeIndicator = document.createElement('div');
+            modeIndicator.className = 'infosky-mode-indicator';
+            modeIndicator.textContent = '点击选择正文区域 (ESC 退出)';
+            document.body.appendChild(modeIndicator);
+        }
+        modeIndicator.style.display = 'block';
+
+        // Add listeners
+        document.addEventListener('mouseover', handleElementHover, true);
+        document.addEventListener('mouseout', handleElementHover, true);
+        document.addEventListener('click', handleElementClick, true);
+        document.addEventListener('keydown', handleEscKey, true);
+    }
+
+    function disableSelectionMode() {
+        isSelectionMode = false;
+
+        if (modeIndicator) {
+            modeIndicator.style.display = 'none';
+        }
+
+        // Cleanup hover
+        if (hoveredElement) {
+            hoveredElement.classList.remove('infosky-element-hover');
+            hoveredElement = null;
+        }
+
+        // Remove listeners
+        document.removeEventListener('mouseover', handleElementHover, true);
+        document.removeEventListener('mouseout', handleElementHover, true);
+        document.removeEventListener('click', handleElementClick, true);
+        document.removeEventListener('keydown', handleEscKey, true);
+    }
+
+    function handleEscKey(e) {
+        if (e.key === 'Escape') {
+            disableSelectionMode();
+        }
+    }
+
+    function handleElementHover(e) {
+        if (!isSelectionMode) return;
+
+        if (e.type === 'mouseover') {
+            // Ignore our own UI
+            if (e.target.closest('#infosky-floating-btn, #infosky-floating-panel, #infosky-side-panel, .infosky-mode-indicator')) {
+                return;
+            }
+
+            if (hoveredElement) {
+                hoveredElement.classList.remove('infosky-element-hover');
+            }
+            hoveredElement = e.target;
+            hoveredElement.classList.add('infosky-element-hover');
+            e.stopPropagation();
+        } else if (e.type === 'mouseout') {
+            if (e.target === hoveredElement) {
+                hoveredElement.classList.remove('infosky-element-hover');
+                hoveredElement = null;
+            }
+        }
+    }
+
+    function handleElementClick(e) {
+        if (!isSelectionMode) return;
+
+        // Ignore our own UI
+        if (e.target.closest('#infosky-floating-btn, #infosky-floating-panel, #infosky-side-panel')) {
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const target = e.target;
+        const htmlContent = target.outerHTML;
+
+        disableSelectionMode();
+
+        // Confirm selection
+        confirmContentSelection(htmlContent, target);
+    }
+
+    function confirmContentSelection(htmlContent, sourceElement) {
+        // reuse display logic or show a specific panel
+        // For simplicity, we'll try to reuse floatingPanel or create a new one
+        // Let's create a custom quick confirmation using our toast system or new UI
+
+        // Wait, the user wants to substitute the "extraction engine". 
+        // Typically this means they want to "save page" but using this content.
+
+        if (confirm('确认使用选中的区域作为正文进行提取吗？')) {
+            submitSelectedContent(htmlContent);
+        }
+    }
+
+    async function submitSelectedContent(htmlContent) {
+        showToast('InfoSky', '正在分析选中内容...');
+
+        try {
+            const result = await callAPI('/api/extension/quick-save', {
+                url: window.location.href,
+                title: document.title,
+                html_content: htmlContent,
+                is_manual_selection: true
+            });
+
+            if (result && result.success) {
+                showToast('成功', result.message || '已保存到知识库');
+                // Trigger side panel refresh if needed or check related
+                checkRelatedKnowledge();
+            } else {
+                showToast('失败', '保存失败');
+            }
+        } catch (error) {
+            console.error('[InfoSky] Save error:', error);
+            showToast('错误', '无法连接到服务器');
+        }
+    }
 
     // ============ Initialize ============
 

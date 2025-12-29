@@ -12,6 +12,7 @@ const pageTitle = document.getElementById('page-title');
 const pageUrl = document.getElementById('page-url');
 const btnSavePage = document.getElementById('btn-save-page');
 const btnCheckRelated = document.getElementById('btn-check-related');
+const btnManualSelect = document.getElementById('btn-manual-select');
 const relatedPanel = document.getElementById('related-panel');
 const relatedList = document.getElementById('related-list');
 const messageEl = document.getElementById('message');
@@ -40,6 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Event Listeners
 btnSavePage.addEventListener('click', handleSavePage);
 btnCheckRelated.addEventListener('click', handleCheckRelated);
+btnManualSelect.addEventListener('click', handleManualSelection);
 btnOpenApp.addEventListener('click', () => chrome.tabs.create({ url: 'http://localhost:3000' }));
 btnSettings.addEventListener('click', () => chrome.runtime.openOptionsPage());
 
@@ -99,7 +101,8 @@ async function handleSavePage() {
             body: JSON.stringify({
                 url: tab.url,
                 title: tab.title,
-                html_content: htmlContent
+                html_content: htmlContent,
+                is_manual_selection: false
             })
         });
 
@@ -150,6 +153,20 @@ async function handleCheckRelated() {
         showMessage(`查询失败: ${error.message}`, 'error');
     } finally {
         setButtonLoading(btnCheckRelated, false);
+    }
+}
+
+// Manual Selection
+async function handleManualSelection() {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab) return;
+
+    // Close popup to let user interact with page
+    try {
+        await chrome.tabs.sendMessage(tab.id, { action: 'toggleSelectionMode' });
+        window.close();
+    } catch (e) {
+        showMessage('无法连接到页面，请刷新后重试', 'error');
     }
 }
 

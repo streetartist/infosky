@@ -39,3 +39,9 @@ class RawInput(SQLModel, table=True):
     fetched_content: Optional[str] = None  # For URLs, the crawled content
     title: Optional[str] = None  # For URLs, the page title
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class SystemConfig(SQLModel, table=True):
+    """Stores system configuration (key-value pairs)"""
+    key: str = Field(primary_key=True)
+    value: str
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
