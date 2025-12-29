@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InfoSky 知识星空</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <span class="logo-icon">✨</span>
+        <span class="logo-text">InfoSky</span>
+      </div>
+      <div class="status-indicator" id="status-indicator">
+        <span class="status-dot"></span>
+        <span class="status-text">连接中...</span>
+      </div>
+    </header>
+
+    <!-- Current Page Info -->
+    <section class="page-info">
+      <h2 class="page-title" id="page-title">加载中...</h2>
+      <p class="page-url" id="page-url"></p>
+    </section>
+
+    <!-- Quick Actions -->
+    <section class="actions">
+      <button class="action-btn primary" id="btn-save-page">
+        <span class="btn-icon">📥</span>
+        <span class="btn-text">保存整页到知识库</span>
+      </button>
+      
+      <button class="action-btn secondary" id="btn-check-related">
+        <span class="btn-icon">🔗</span>
+        <span class="btn-text">查找相关知识</span>
+      </button>
+    </section>
+
+    <!-- Related Knowledge Panel -->
+    <section class="related-panel" id="related-panel" style="display: none;">
+      <h3 class="panel-title">📚 相关知识</h3>
+      <div class="related-list" id="related-list">
+        <!-- Dynamic content -->
+      </div>
+    </section>
+
+    <!-- Status Message -->
+    <div class="message" id="message" style="display: none;"></div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <a href="#" id="btn-open-app">打开 InfoSky</a>
+      <span class="divider">|</span>
+      <a href="#" id="btn-settings">设置</a>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
